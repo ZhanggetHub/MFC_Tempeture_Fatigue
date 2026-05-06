@@ -1,5 +1,7 @@
 # MFC Temperature Fatigue Life Prediction
 
+Repository alias: `MFC_Tempeture_Fatigue`
+
 This repository contains MATLAB and Python code for preprocessing and modeling
 temperature-induced degradation of D31 Macro Fiber Composite (MFC) sensor
 performance.
