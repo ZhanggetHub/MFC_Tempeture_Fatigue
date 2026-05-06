@@ -1,9 +1,12 @@
-%% Stage 1: preprocess raw MFC capacitance/impedance/inductance spectra.
+%% Stage 1: preprocess raw MFC electrical spectra.
 % Outputs:
 %   outputs/stage1_preprocessed/cleaned_spectra.csv
 %   outputs/stage1_preprocessed/cleaned_spectra.mat
 %   outputs/stage1_preprocessed/preprocess_qc.csv
 %   outputs/stage1_preprocessed/qc_plots/*.png
+%
+% Supported WaveForms exports:
+%   Capacitance, Impedance, Inductance, Phase, Admittance
 
 clear; clc;
 
@@ -53,7 +56,7 @@ for i = 1:numel(files)
         values = raw{:, c + 1};
         if ~isnumeric(values); values = str2double(string(values)); end
 
-        [cleaned, flag, methodCode] = cleanSeries(values, cfg);
+        [cleaned, flag, methodCode] = cleanSeries(values, metric, colName, cfg);
 
         sampleId = repmat(string(meta.sampleId), numel(freq), 1);
         fileCol = repmat(string(fileName), numel(freq), 1);
@@ -81,7 +84,7 @@ for i = 1:numel(files)
             safeName = regexprep(sprintf('%s_%s_%s', meta.sampleId, metric, colName), ...
                 '[<>:"/\\|?*\s]+', '_');
             outFig = fullfile(cfg.figureFolder, [safeName '.png']);
-            MFC_QC_Plots(freq, values, cleaned, flag, fileName, colName, outFig);
+            MFC_QC_Plots(freq, values, cleaned, flag, fileName, metric, colName, outFig);
         end
     end
 end
@@ -118,7 +121,7 @@ end
 
 function meta = parseStateFromFileName(fileName)
 base = erase(fileName, '.csv');
-base = regexprep(base, '-(Capacitance|Impedance|Inductance)$', '');
+base = regexprep(base, '-(Capacitance|Impedance|Inductance|Phase|Admittance)$', '');
 meta.sampleId = base;
 meta.layup = '0-45-0-45-0';
 meta.mfcMode = 'D31';
@@ -136,19 +139,20 @@ elseif contains(fileName, '基线')
 end
 end
 
-function [cleaned, flag, methodCode] = cleanSeries(values, cfg)
+function [cleaned, flag, methodCode] = cleanSeries(values, metric, channel, cfg)
 values = double(values(:));
+workingValues = prepareSeriesForCleaning(values, metric, channel, cfg);
 flag = false(size(values));
 methodCode = strings(size(values));
 methodCode(:) = "none";
 
-bad = isnan(values) | isinf(values) | abs(values) > cfg.maxAbsValue;
+bad = isnan(workingValues) | isinf(workingValues) | abs(workingValues) > cfg.maxAbsValue;
 flag = flag | bad;
 methodCode(bad) = "invalid_or_physical_limit";
 
-filled = fillmissing(values, 'linear', 'EndValues', 'nearest');
+filled = fillmissing(workingValues, 'linear', 'EndValues', 'nearest');
 if all(isnan(filled))
-    cleaned = values;
+    cleaned = workingValues;
     return;
 end
 
@@ -199,6 +203,24 @@ end
 largeJump = abs(cleaned - filled) > cfg.maxCleanedRelativeJump .* max(abs(filled), eps);
 flag = flag | largeJump;
 methodCode(largeJump & methodCode == "none") = "large_cleaning_delta";
+
+if isPhaseSeries(metric, channel, cfg) && cfg.unwrapPhaseDegrees
+    methodCode(methodCode == "none") = "phase_unwrap_smooth";
+end
+end
+
+function workingValues = prepareSeriesForCleaning(values, metric, channel, cfg)
+workingValues = values;
+if isPhaseSeries(metric, channel, cfg) && cfg.unwrapPhaseDegrees
+    finiteMask = isfinite(values);
+    if any(finiteMask)
+        workingValues(finiteMask) = rad2deg(unwrap(deg2rad(values(finiteMask))));
+    end
+end
+end
+
+function tf = isPhaseSeries(metric, channel, cfg)
+tf = any(strcmpi(metric, cfg.phaseSuffixes)) || contains(lower(channel), 'th');
 end
 
 function qc = summarizeQc(fileName, metric, channel, meta, freq, raw, cleaned, flag, duplicateCount, expectedRows)

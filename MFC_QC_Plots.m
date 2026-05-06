@@ -1,4 +1,4 @@
-function MFC_QC_Plots(freq, raw, cleaned, isOutlier, sourceFile, channel, outPath)
+function MFC_QC_Plots(freq, raw, cleaned, isOutlier, sourceFile, metric, channel, outPath)
 % Save a compact before/after QC plot for one spectrum channel.
 
 fig = figure('Visible', 'off', 'Color', 'w', 'Position', [100, 100, 1100, 650]);
@@ -12,7 +12,7 @@ if any(isOutlier)
 end
 grid on;
 xlabel('Frequency (Hz)');
-ylabel(channel, 'Interpreter', 'none');
+ylabel(sprintf('%s / %s', metric, channel), 'Interpreter', 'none');
 title(sourceFile, 'Interpreter', 'none');
 legend({'Raw','Cleaned','Outlier'}, 'Location', 'best');
 
