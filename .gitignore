@@ -1,0 +1,38 @@
+# Raw experimental datasets and instrument exports
+/0 45 0 45 0 */
+/-45 45 90 45 -45 */
+*.dwf3*
+*.mph
+
+# Generated outputs
+/outputs/
+*.mat
+*.fig
+*.png
+*.jpg
+*.jpeg
+*.tif
+*.tiff
+*.xlsx
+
+# Python runtime/cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# MATLAB temporary and autosave files
+*.asv
+*.m~
+*.slxc
+*.mex*
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
