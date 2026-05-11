@@ -1,45 +1,78 @@
-# MFC Temperature Fatigue Life Prediction
+# MFC 温度疲劳 Stage 1 全电学参数预处理
 
-Repository alias: `MFC_Tempeture_Fatigue`
+本仓库当前重点是 `Stage 1`：对 `0/45/0/45/0` 编织纹 D31 MFC 的温度疲劳实验电学谱数据进行 MATLAB 预处理，输出给后续 Python Stage 2 使用的标准化数据。
 
-This repository contains MATLAB and Python code for preprocessing and modeling
-temperature-induced degradation of D31 Macro Fiber Composite (MFC) sensor
-performance.
+## 当前版本做什么
 
-## Workflow
+- 处理 8 类 Digilent WaveForms 导出 CSV：
+  - `Capacitance`
+  - `Impedance`
+  - `Inductance`
+  - `Phase`
+  - `Admittance`
+  - `Current`
+  - `Voltage`
+  - `Impedance Analyzer`
+- 基线固定为 `25 °C`，`stage=0`，`cycles=0`。
+- 退化数据按累计循环协议编号：70 °C 第 1/2/3 次为 `cycles=1/2/3`，一直到 120 °C 第 2 次为 `cycles=17`。
+- 输出两类文件：
+  - 给 Python 读取的统一长表。
+  - 给人工检查的按电学参数分类的宽表 Excel。
+- 清洗逻辑采用“物理约束优先”：保留压电材料真实谐振/反谐振、相位跨越、阻抗-导纳互补变化，只处理孤立尖峰、非物理跳变、仪器 notch、无效值。
 
-1. Run MATLAB preprocessing on raw WaveForms CSV exports:
+## 运行方式
 
-   ```matlab
-   MFC_Stage1_Preprocess_RawSpectra
-   ```
+在 MATLAB 中进入本项目根目录后执行：
 
-   This creates cleaned spectra, QC tables, and optional QC plots under
-   `outputs/stage1_preprocessed/`.
+```matlab
+MFC_Stage1_Preprocess_RawSpectra
+```
 
-2. Run Python feature extraction, physics-constrained damage scoring, and life
-   prediction:
+输出目录：
 
-   ```powershell
-   python run_stage2_feature_and_life_prediction.py
-   ```
+```text
+outputs/stage1_preprocessed/
+```
 
-   This creates `processed_features.csv`, `health_index.csv`,
-   `model_metrics.csv`, `life_predictions.csv`, and report figures under
-   `outputs/stage2_life_prediction/`.
+## 主要输出
 
-## Repository Boundary
+Python Stage 2 主输入：
 
-The Git project tracks source code and documentation only. Raw experimental
-folders, WaveForms exports, COMSOL models, MATLAB/Python caches, and generated
-outputs are intentionally ignored by `.gitignore`.
+```text
+outputs/stage1_preprocessed/stage1_all_electrical_long_with_cycles.csv
+```
 
-## Main Files
+固定列名：
 
-- `MFC_Preprocess_Config.m`: MATLAB preprocessing configuration.
-- `MFC_Stage1_Preprocess_RawSpectra.m`: raw CSV cleaning and QC export.
-- `MFC_QC_Plots.m`: MATLAB before/after cleaning plots.
-- `mfc_life_prediction/`: Python package for features, damage models, training,
-  and reporting.
-- `run_stage2_feature_and_life_prediction.py`: Python stage-2 entry point.
+```text
+file, metric, channel, tempC, stage, cycles, isBaseline,
+freqHz, rawValue, alignedValue, cleanValue, ratioToBaseline,
+isOutlier, isDistortion, isNotchArtifact, cleanMethod
+```
 
+人工检查宽表：
+
+```text
+stage1_human_Capacitance.xlsx
+stage1_human_Admittance.xlsx
+stage1_human_Impedance_Analyzer.xlsx
+...
+```
+
+质量控制输出：
+
+```text
+stage1_preprocess_qc.csv
+stage1_channel_consistency_qc.csv
+stage1_qa_report.json
+figs/*.png
+```
+
+## 中文详细文档
+
+- [更新后 Stage 1 全电学参数预处理说明](docs/README_Stage1_Updated_CN.md)
+- [更新前 Stage 1 脚本说明](docs/README_Stage1_Previous_CN.md)
+
+## 注意
+
+当前环境若 MATLAB 许可证不可用，会出现 `License checkout failed`，这不是脚本逻辑错误。代码已按 MATLAB 运行方式组织，需在有 MATLAB 授权的环境中生成真实输出。
